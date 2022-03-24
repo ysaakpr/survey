@@ -19,7 +19,7 @@
       </div>
        
     </header>
-    <div v-show="!Vue3GoogleOauth.isInit" style="position:fixed;top:50%;left:50%;transform: translate(-50%, -50%);">
+    <div v-show="!Vue3GoogleOauth.isInit || loading" style="position:fixed;top:50%;left:50%;transform: translate(-50%, -50%);">
       Wait loading
     </div>
     <flow-form
@@ -29,7 +29,7 @@
       v-bind:questions="questions"
       v-bind:language="language"
       v-bind:standalone="true"
-      v-show="Vue3GoogleOauth.isInit && Vue3GoogleOauth.isAuthorized"
+      v-show="Vue3GoogleOauth.isInit && Vue3GoogleOauth.isAuthorized && !loading"
     >
     <!-- Custom content for the Complete/Submit screen slots in the FlowForm component -->
       <!-- We've overriden the default "complete" slot content -->
@@ -47,7 +47,7 @@
 
       <!-- We've overriden the default "completeButton" slot content -->
       <template v-slot:completeButton>
-        <div class="f-submit" v-if="!submitted">
+        <div class="f-submit" v-show="!submitted">
           <button 
             class="o-btn-action"
             ref="button"
@@ -64,18 +64,21 @@
             v-html="language.formatString(language.pressEnter)">
           </a>
         </div>
+        <div class="f-submit" v-show="submitted">
+          <p class="text-success">Submitted succesfully.</p>
+          <button
+              class="o-btn-action"
+              ref="button"
+              type="submit"
+              href="#"
+              v-on:click.prevent="onSubmiteNew()"
+              aria-label="Press to new"
+            >
+              <span>Submit another review</span>
+          </button>
+        </div>
 
-        <p class="text-success" v-if="submitted">Submitted succesfully.</p>
-        <button v-if="submitted"
-            class="o-btn-action"
-            ref="button"
-            type="submit"
-            href="#"
-            v-on:click.prevent="onSubmiteNew()"
-            aria-label="Press to new"
-          >
-            <span>Submit another review</span>
-        </button>
+        
       </template>
     </flow-form>
     <div v-show="Vue3GoogleOauth.isInit && !Vue3GoogleOauth.isAuthorized">
@@ -116,6 +119,10 @@
     flex-wrap: nowrap !important;
     -ms-flex-wrap: nowrap !important;
     /* flex-wrap: wrap; */
+}
+.vff ul.f-radios li.f-selected, .vff ul.f-radios li:active {
+    border-color: var(--vff-main-text-color);
+    background-color: #bbebca !important;
 }
 </style>
 
@@ -188,6 +195,7 @@
                 tagline: "Hello,",
                 title: 'Welcome to Feedback portal',
                 type: QuestionType.SectionBreak,
+                answer: 'default',
               }),
               new QuestionModel({
                 id: 'review_to',
@@ -198,20 +206,21 @@
                 required: true,
                 inline: true,
                 placeholder: 'Name',
-                options: [
-                  new ChoiceOption({
-                    label: 'Myself',
-                    value: 'self@cf.in'
-                  }),
-                  new ChoiceOption({
-                    label: 'Vyshakh',
-                    value: 'vysh@cf.in'
-                  }),
-                  new ChoiceOption({
-                    label: 'Venu',
-                    value: 'venu@cf.in'
-                  })
-                ],
+                options: [],
+                // options: [
+                //   new ChoiceOption({
+                //     label: 'Myself',
+                //     value: 'self@cf.in'
+                //   }),
+                //   new ChoiceOption({
+                //     label: 'Vyshakh',
+                //     value: 'vysh@cf.in'
+                //   }),
+                //   new ChoiceOption({
+                //     label: 'Venu',
+                //     value: 'venu@cf.in'
+                //   })
+                // ],
               }),
 
               buildMultiChoice("knowledge",
@@ -291,6 +300,8 @@
 
     data() {
       return {
+        loading: true,
+        users: [],
         user: '',
         userName: '',
         userObject: {},
@@ -303,12 +314,13 @@
       }
     },
 
-    mounted() {
+    async mounted() {
       console.log("called");
       document.addEventListener('keyup', this.onKeyListener)
       if(this.Vue3GoogleOauth.isInit && this.Vue3GoogleOauth.isAuthorized) {
         this.questions[0].tagline= "Hello " + this.Vue3GoogleOauth.instance.currentUser.get().getBasicProfile().getName();
         this.questions[0].subtitle = "You have logged in with " + this.Vue3GoogleOauth.instance.currentUser.get().getBasicProfile().getEmail();
+        await this.prepData();
       }
     },
 
@@ -348,7 +360,9 @@
         // We've overriden the default "complete" slot so
         // we need to implement the "keyup" listener manually.
         if ($event.key === 'Enter' && this.completed && !this.submitted) {
-          this.onSendData()
+          this.onSendData();
+        } else if($event.key === 'Enter' && this.completed && this.submitted) {
+          this.onSubmiteNew();
         }
       },
 
@@ -357,11 +371,15 @@
         // This method is called whenever the "completed" status is changed.
         this.completed = completed
       },
-      onSubmiteNew() {
+      async onSubmiteNew() {
         // this.$refs.flowform.reset();
-        this.$refs.flowform.submitted = false;
-        this.$refs.flowform.reset();
-        this.$refs.flowform.goToQuestion(1);
+        // this.$refs.flowform.complete = false;
+        // this.$refs.flowform.submitted = false;
+        await this.prepData();
+        this.submitted = false;
+        this.completed = false;
+        this.$refs.flowform.reset(1);
+        // this.$refs.flowform.goToQuestion(1);
       },
       /* eslint-disable-next-line no-unused-vars */
       onSubmit(questionList) {
@@ -369,7 +387,79 @@
         // completeButton slot.
         this.onSendData()
       },
-      
+      async prepData() {
+        if (!this.Vue3GoogleOauth.isInit || !this.Vue3GoogleOauth.isAuthorized) {
+          console.log("not authorized for prepdata")
+          return;
+        }
+        this.loading = true;
+        var usersResp = await fetch("https://x8ki-letl-twmt.n7.xano.io/api:8bVCltr6/users",{
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': this.Vue3GoogleOauth.instance.currentUser.get().getAuthResponse().id_token,
+          }
+        });
+
+        var submissionResp = await fetch("https://x8ki-letl-twmt.n7.xano.io/api:8bVCltr6/mysubmissions",{
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': this.Vue3GoogleOauth.instance.currentUser.get().getAuthResponse().id_token,
+          }
+        });
+
+        var users = await usersResp.json();
+        var submissions = await submissionResp.json();
+
+        submissions.forEach(function (item, index) {
+          users.forEach(function (u, i) {
+            if(u.email == item.review_to) {
+              console.log(JSON.stringify(u));
+              if(u.hasOwnProperty("count")) {
+                u.count = u.count + 1
+              } else {
+                u.count = 1;
+              }
+            }
+          })
+        });
+
+        console.log(users);
+        console.log(submissions);
+        this.users = usersResp; 
+        var that = this;
+        var userOptions = []
+        users.forEach(function (u, i) {
+          if (u.hasOwnProperty("count")) {
+            u.displayName = u.name + "  (reviewed)"
+          } else {
+            u.displayName = u.name
+          }
+          
+          var op = new ChoiceOption({
+            label: u.displayName,
+            value: u.email
+          })
+
+          if(that.Vue3GoogleOauth.instance.currentUser.get().getBasicProfile().getEmail() == u.email) {
+            var nam = "Myself";
+            if (u.hasOwnProperty("count") && u.count > 0 ) {
+              nam = "Myself (reviewd)"
+            }
+            op = new ChoiceOption({
+              label: nam,
+              value: u.email
+            })
+            userOptions.unshift(op);
+          } else {
+            userOptions.push(op);
+          }
+        });
+        this.questions[1].options = userOptions;
+        this.loading = false;     
+      },
+
       onSendData() {
         // Set `submitted` to true so the form knows not to allow back/forward
         // navigation anymore.
@@ -425,12 +515,15 @@
     },
     
     watch: {
-      'Vue3GoogleOauth.isAuthorized'(us,old) {
+      async 'Vue3GoogleOauth.isAuthorized'(us,old)  {
         console.log(this.Vue3GoogleOauth.instance.currentUser.get().getAuthResponse());
         console.log(this.Vue3GoogleOauth.instance.currentUser);
         // this.questions[0].answer = this.Vue3GoogleOauth.instance.currentUser.get().getBasicProfile().getEmail();
         this.questions[0].tagline= "Hello " + this.Vue3GoogleOauth.instance.currentUser.get().getBasicProfile().getName();
         this.questions[0].subtitle = "You have logged in with " + this.Vue3GoogleOauth.instance.currentUser.get().getBasicProfile().getEmail();
+        
+        await this.prepData();
+          
       }
     },
     

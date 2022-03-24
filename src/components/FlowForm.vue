@@ -791,19 +791,29 @@
         this.disabled = state
       },
 
-      reset() {
+      reset(q) {
+        this.completed = false;
+        this.submitted = false;
         this.questionModels.forEach(question => question.resetAnswer())
-        this.goToQuestion(0)
+        if(q) {
+          this.goToQuestion(q)
+        } else {
+          this.goToQuestion(0)
+        }
       }
     },
 
     watch: {
-      completed() {
-        this.emitComplete()
+      completed(n,o) {
+        if(n){
+          this.emitComplete()
+        }
       },
       
-      submitted() {
-        this.stopTimer()
+      submitted(n,o) {
+        if(n){
+          this.stopTimer()
+        }
       }
     }
   }
