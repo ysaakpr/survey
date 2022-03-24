@@ -18,7 +18,8 @@ const gauthOption = {
   // scope: 'profile email',
   audiences: 'https://db.fauna.com/db/y1raujcjgynr1',
   prompt: 'consent',
-  fetch_basic_profile: true
+  fetch_basic_profile: true,
+  hosted_domain: "captainfresh.in"
 }
 app.use(GAuth, gauthOption);
 

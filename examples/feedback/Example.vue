@@ -185,16 +185,15 @@
         return [
               new QuestionModel({
                 id: 'review_by',
-                tagline: "Hello ,",
-                title: 'Welcome to peer feedback portal',
+                tagline: "Hello,",
+                title: 'Welcome to Feedback portal',
                 type: QuestionType.SectionBreak,
-                required: true,
-                placeholder: 'Start typing here...'
               }),
               new QuestionModel({
                 id: 'review_to',
-                tagline: 'Choose your peer or in case its self review, choose self from the dropdown',
+                tagline: 'Choose peer from the drop down',
                 title: 'I am giving this review for ',
+                subtitle: "For self review, choose 'Myself' from the drop down",
                 type: QuestionType.Dropdown,
                 required: true,
                 inline: true,
@@ -218,23 +217,23 @@
               buildMultiChoice("knowledge",
               "Rate yourself or your peer",
               "Knowledge",
-              "rate %s on how knowedgeable are they during your interation",
+              "rate peer on how knowedgeable are they during your interation",
               desc
               ),
               buildMultiChoice("qualityofwork",
               "Rate yourself or your peer",
               "Quality of Work",
-              "how satisfied you about yourself/peer on the quality of work done",
+              "How satisfied you about yourself/peer on the quality of work done",
               desc),
               buildMultiChoice("productivity",
               "Rate yourself or your peer",
               "Productivity",
-              "how satisfied you about yourself/peer in terms of productivity",
+              "How satisfied you about yourself/peer in terms of productivity",
               desc),
               buildMultiChoice("accountability",
               "Rate yourself or your peer",
               "Accountability/Ownership",
-              "how satisfied you about yourself/peer in terms of accountability or ownership",
+              "How satisfied you about yourself/peer in terms of accountability or ownership",
               desc),
               buildMultiChoice("motivation",
               "Rate yourself or your peer",
@@ -246,7 +245,7 @@
               "Availability",
               "How did you find the peer or yourself available during work hours and after for your work dependancies",
               desc),
-              buildMultiChoice("teamplayer",
+              buildMultiChoice("teamfit",
               "Rate yourself or your peer",
               "Team Player",
               "How did you find the peer or yourself as a team player, his or her team fit",
@@ -262,7 +261,7 @@
                 placeholder: 'Mention what yourself/peer achived in the past year...'
               }),
               new QuestionModel({
-                id: 'Improvements',
+                id: 'attention',
                 title: 'Improvements',
                 type: QuestionType.LongText,
                 maxLength: 1000,
@@ -307,6 +306,10 @@
     mounted() {
       console.log("called");
       document.addEventListener('keyup', this.onKeyListener)
+      if(this.Vue3GoogleOauth.isInit && this.Vue3GoogleOauth.isAuthorized) {
+        this.questions[0].tagline= "Hello " + this.Vue3GoogleOauth.instance.currentUser.get().getBasicProfile().getName();
+        this.questions[0].subtitle = "You have logged in with " + this.Vue3GoogleOauth.instance.currentUser.get().getBasicProfile().getEmail();
+      }
     },
 
     beforeUnmount() {
