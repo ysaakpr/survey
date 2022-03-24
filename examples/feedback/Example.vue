@@ -518,6 +518,19 @@
       async 'Vue3GoogleOauth.isAuthorized'(us,old)  {
         console.log(this.Vue3GoogleOauth.instance.currentUser.get().getAuthResponse());
         console.log(this.Vue3GoogleOauth.instance.currentUser);
+        
+
+        var cur = await fetch('https://x8ki-letl-twmt.n7.xano.io/api:8bVCltr6/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': this.Vue3GoogleOauth.instance.currentUser.get().getAuthResponse().id_token,
+          },
+        });
+        var cu = cur.json();
+
+        console.log(cu);
+
         // this.questions[0].answer = this.Vue3GoogleOauth.instance.currentUser.get().getBasicProfile().getEmail();
         this.questions[0].tagline= "Hello " + this.Vue3GoogleOauth.instance.currentUser.get().getBasicProfile().getName();
         this.questions[0].subtitle = "You have logged in with " + this.Vue3GoogleOauth.instance.currentUser.get().getBasicProfile().getEmail();
